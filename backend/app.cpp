@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <signal.h>
 
 int main() {
     char hostname[256];
@@ -34,6 +35,7 @@ int main() {
         std::cerr << "ERROR: Failed to listen on port 8080" << std::endl;
         return 1;
     }
+    signal(SIGPIPE, SIG_IGN);
     
     std::cout << "Server listening on port 8080 (hostname: " << hostname << ")" << std::endl;
     
@@ -42,8 +44,10 @@ int main() {
         int client_fd = accept(server_fd, NULL, NULL);
         if (client_fd < 0) continue;
 
-        char buffer[1024] = {0};
-        read(client_fd, buffer, sizeof(buffer));  // <-- ADD THIS
+        char buffer[4096];
+        while (read(client_fd, buffer, sizeof(buffer)) > 0) {
+            if (strstr(buffer, "\r\n\r\n")) break;
+        }
         
         // Simple HTTP response
         std::string response = "HTTP/1.1 200 OK\r\n";
